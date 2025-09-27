@@ -21,7 +21,7 @@ Purchasable car washes for **QBOX** and **ESX**
 
 ## Dependencies
 
-- [ESX]() or QBCore
+- ESX or QBCore
 - [ox_lib](https://github.com/overextended/ox_lib/releases)
 - [ox_target](https://github.com/overextended/ox_target/releases)
 - [ox_inventory](https://github.com/overextended/ox_inventory/releases)
@@ -29,5 +29,6 @@ Purchasable car washes for **QBOX** and **ESX**
 ---
 
 ## [Showcase](https://youtu.be/hgsOPUYyKfw)
+
 
 ## Reselling this resource is strictly prohibited
