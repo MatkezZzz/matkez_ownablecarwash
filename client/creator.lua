@@ -33,12 +33,14 @@ function raycast(type)
         if IsControlPressed(0, 73) then
             creating = false
             lib.hideTextUI()
+            DeleteEntity(raycastObject)
+            creatorContext()
             return false
         elseif IsControlPressed(0, 19) then
             SetEntityHeading(raycastObject, GetEntityHeading(raycastObject) + 1.5)
         elseif IsControlPressed(0, 21) then
             SetEntityHeading(raycastObject, GetEntityHeading(raycastObject) - 1.5)
-        elseif IsControlJustPressed(0, 215) then
+        elseif IsControlPressed(0, 215) then
             creating = false,
             lib.hideTextUI()
             if ec == vec3(0, 0, 0) then Notify(translate('invalid_placement'), 'error', 5000) return false end
@@ -54,6 +56,7 @@ function raycast(type)
             end
             DeleteEntity(raycastObject)
             raycastObject = nil
+            creatorContext()
             return true
         end
     end
@@ -82,6 +85,7 @@ function creatorContext()
                     })
                     if not input then return end
                     creatorData.label = input[1]
+                    creatorContext()
                 end,
             },
             {
@@ -94,6 +98,7 @@ function creatorContext()
                     })
                     if not input then return end
                     creatorData.price = input[1]
+                    creatorContext()
                 end,
             },
             {
@@ -126,6 +131,7 @@ function creatorContext()
                 icon = icon.reset_all,
                 onSelect = function()
                     resetCreatorData()
+                    creatorContext()
                 end,
             },
             {
