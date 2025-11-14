@@ -4,7 +4,10 @@ local deliveries = {}
 local delivering = {}
 
 function discordLog(description)
-    if sConfig.webhook then
+    if not sConfig.log then return end
+    if sConfig.log.ox_lib then
+        lib.logger(GetCharacterIdentifier(source), 'matkez_ownablecarwash', description)
+    else
         local embed = {{
             title = GetCurrentResourceName(),
             description = description,
@@ -12,6 +15,14 @@ function discordLog(description)
         }}
         PerformHttpRequest(sConfig.webhook, function() end, 'POST', json.encode({ embeds = embed }), {['Content-Type'] = 'application/json'})
     end
+end
+
+function SpawnVehicle(source, model, coords)
+    local vehicle = CreateVehicle(model, coords.xyz, coords.w, true, false)
+    while not DoesEntityExist(vehicle) do
+        Wait(0)
+    end
+    return vehicle
 end
 
 function randomId()

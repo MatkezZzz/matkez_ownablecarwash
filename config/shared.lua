@@ -1,5 +1,5 @@
 return {
-    Framework = 'QBOX', -- QBOX, ESX
+    Framework = 'QB', -- QBOX, ESX, QB
     Language = 'EN',
     Ordering = {
         PricePerLiter = 10,
@@ -27,7 +27,7 @@ return {
         WashingDuration = 10000
     },
     Creator = {
-        allowed = {'char1:317994044a7982da341c2188ad611e28490d4651', 'ASDWFJAD', 'R9BVIRHZ'}, -- identifer
+        allowed = {'cahr1:aaaa', 'ASDASD123'}, -- identifer
         props = {
             ped = 'cs_fbisuit_01',
             wash_coords = 'sultan',
