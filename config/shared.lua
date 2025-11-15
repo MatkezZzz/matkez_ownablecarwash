@@ -1,5 +1,6 @@
 return {
     Framework = 'QB', -- QBOX, ESX, QB
+    Target = 'qb-target', -- qb-target or ox_target
     Language = 'EN',
     Ordering = {
         PricePerLiter = 10,

@@ -38,17 +38,32 @@ function setup()
         SetEntityInvincible(ped, true)
         SetBlockingOfNonTemporaryEvents(ped, true)
 
-        exports.ox_target:addLocalEntity(ped, {
-            {
-                name = 'carwash_'..v.wash_id,
-                icon = icon.ox_target_open,
-                label = translate('ox_target_open'),
-                onSelect = function(target)
-                    CarWash(v.wash_id)
-                end,
-                distance = 1.5,
-            }
-        })
+        if Config.Target == 'ox_target' then
+            exports.ox_target:addLocalEntity(ped, {
+                {
+                    name = 'carwash_'..v.wash_id,
+                    icon = icon.ox_target_open,
+                    label = translate('ox_target_open'),
+                    onSelect = function(target)
+                        CarWash(v.wash_id)
+                    end,
+                    distance = 1.5,
+                }
+            })
+        elseif Config.Target == 'qb-target' then
+            exports['qb-target']:AddTargetEntity(ped, {
+                options = {
+                    {
+                        icon = icon.ox_target_open,
+                        label = translate('ox_target_open'),
+                        action = function(entity)
+                            CarWash(v.wash_id)
+                        end,
+                    }
+                },
+                distance = 1.5
+            })
+        end
 
         table.insert(props, ped)
 
