@@ -9,8 +9,8 @@ function setupBlips()
         RemoveBlip(blips[i])
     end
     local washes = lib.callback.await('matkez_ownablecarwash:getAllWashes', false)
-    for _, v in ipairs(washes) do
-        local data = json.decode(v.data)
+    for _, v in pairs(washes) do
+        local data = v.data
         local blip = AddBlipForCoord(data.washCoords.x, data.washCoords.y, data.washCoords.z)
         SetBlipSprite(blip, Config.Blip.sprite)
         SetBlipColour(blip, Config.Blip.color)
@@ -25,9 +25,10 @@ function setupBlips()
 end
 
 function setup()
+    Wait(1000)
     local washes = lib.callback.await('matkez_ownablecarwash:getAllWashes', false)
-    for _, v in ipairs(washes) do
-        local data = json.decode(v.data)
+    for _, v in pairs(washes) do
+        local data = v.data
         RequestModel(Config.Creator.props.ped)
         while not HasModelLoaded(Config.Creator.props.ped) do
             Wait(0)
@@ -70,7 +71,6 @@ function setup()
         lib.zones.sphere({
             coords = vec3(data.washCoords.x, data.washCoords.y, data.washCoords.z),
             radius = Config.Washing.WashRadius,
-            --debug = true,
             inside = function()
                 if IsControlJustPressed(0, 38) then
                     Wash(v.wash_id)
@@ -88,13 +88,14 @@ function setup()
         lib.zones.sphere({
             coords = vec3(data.truckCoords.x, data.truckCoords.y, data.truckCoords.z),
             radius = 5,
-            --debug = true,
             inside = function()
+                DrawMarker(39, data.truckCoords.x, data.truckCoords.y, data.truckCoords.z, 0, 0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 255, 255, 255, 255, false, true, 2, false, false, false, false)
                 if IsControlJustPressed(0, 38) then
                     if not IsPedInAnyVehicle(cache.ped, false) then return end
                     local vehicle = GetVehiclePedIsIn(cache.ped, false)
                     local attached, trailer = GetVehicleTrailerVehicle(vehicle)
                     lib.callback.await('matkez_ownablecarwash:deliverWater', false, GetVehicleNumberPlateText(trailer), v.wash_id)
+                    Wait(500)
                     return
                 end
             end,
@@ -140,7 +141,6 @@ lib.callback.register('matkez_ownablecarwash:createWashCL', function(data, wash_
     lib.zones.sphere({
         coords = vec3(data.washCoords.x, data.washCoords.y, data.washCoords.z),
         radius = Config.Washing.WashRadius,
-        --debug = true,
         inside = function()
             if IsControlJustPressed(0, 38) then
                 Wash(wash_id)
@@ -158,7 +158,6 @@ lib.callback.register('matkez_ownablecarwash:createWashCL', function(data, wash_
     lib.zones.sphere({
         coords = vec3(data.truckCoords.x, data.truckCoords.y, data.truckCoords.z),
         radius = 5,
-        --debug = true,
         inside = function()
             if IsControlJustPressed(0, 38) then
                 if not IsPedInAnyVehicle(cache.ped, false) then return end
@@ -212,7 +211,7 @@ function CarWash(wash_id)
     end
     
     local options = {}
-    local workersCount = json.decode(wash.workers)
+    local workersCount = wash.workers
     local isEmployee = lib.callback.await('matkez_ownablecarwash:isEmployee', false, wash_id, false)
 
     if not isEmployee then Notify(nil, translate('not_employee'), 'error', 5000) return false end
@@ -239,7 +238,7 @@ function CarWash(wash_id)
         icon = icon.order_list,
         onSelect = function()
             local opt = {}
-            local list = json.decode(wash.orders or '[]')
+            local list = wash.orders
 
             table.insert(opt, {
                 title = translate('go_back'),
@@ -250,7 +249,7 @@ function CarWash(wash_id)
                 end,
             })
 
-            for __, order in ipairs(list) do
+            for __, order in pairs(list) do
                 table.insert(opt, {
                     title = tostring(order.liters)..'L',
                     description = string.format(translate('busy'), order.busy),
@@ -342,7 +341,7 @@ function CarWash(wash_id)
             icon = icon.fire,
             onSelect = function()
                 local opt = {}
-                local workers = json.decode(wash.workers or '[]')
+                local workers = wash.workers
                 table.insert(opt, {
                     title = translate('go_back'),
                     description = translate('go_back_description'),
@@ -351,7 +350,7 @@ function CarWash(wash_id)
                         CarWash(wash_id)
                     end,
                 })
-                for __, worker in ipairs(workers) do
+                for __, worker in pairs(workers) do
                     table.insert(opt, {
                         title = worker.name,
                         icon = icon.user,

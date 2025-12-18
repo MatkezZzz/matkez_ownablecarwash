@@ -8,16 +8,6 @@ RegisterNetEvent('esx:playerLoaded', function (xPlayer, skin)
     setup()
 end)
 
-function HasPermission()
-    local identifier = ESX.GetPlayerData().identifier
-    for _, id in ipairs(Config.Creator.allowed) do
-        if id == identifier then 
-            return true 
-        end
-    end
-    return false
-end
-
 function GetCharacterIdentifier()
     return ESX.GetPlayerData().identifier
 end

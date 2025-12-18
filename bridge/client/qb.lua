@@ -7,16 +7,6 @@ AddEventHandler('QBCore:Client:OnPlayerLoaded', function()
     setup()
 end)
 
-function HasPermission()
-    local identifier = QB.Functions.GetPlayerData().citizenid
-    for _, id in ipairs(Config.Creator.allowed) do
-        if id == identifier then 
-            return true 
-        end
-    end
-    return false
-end
-
 function GetCharacterIdentifier()
     return QB.Functions.GetPlayerData().citizenid
 end

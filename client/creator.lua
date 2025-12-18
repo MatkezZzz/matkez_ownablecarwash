@@ -43,7 +43,7 @@ function raycast(type)
         elseif IsControlPressed(0, 215) then
             creating = false,
             lib.hideTextUI()
-            if ec == vec3(0, 0, 0) then Notify(translate('invalid_placement'), 'error', 5000) return false end
+            if ec == vec3(0, 0, 0) then Notify(nil, translate('invalid_placement'), 'error', 5000) return false end
             FreezeEntityPosition(raycastObject, true)
             if type == 'ped' then
                 creatorData.pedCoords = GetEntityCoords(raycastObject)
@@ -63,8 +63,6 @@ function raycast(type)
 end
 
 function creatorContext()
-    if not HasPermission() then return end
-
     local disabled = true
 
     if creatorData.label ~= nil and creatorData.pedCoords ~= nil and creatorData.truckCoords ~= nil and creatorData.washCoords ~= nil then 
@@ -150,6 +148,4 @@ function creatorContext()
     lib.showContext('creator_context')
 end
 
-RegisterCommand(Config.Creator.Command, function()
-    creatorContext()
-end)
+lib.callback.register('matkez_ownablecarwash:client:creatorContext', creatorContext)

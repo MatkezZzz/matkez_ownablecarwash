@@ -3,7 +3,7 @@ game 'gta5'
 author 'MatkezZz'
 description 'Ownable car washes'
 lua54 'yes'
-version '1.0.2'
+version '1.0.4'
 
 client_scripts {
     'client/main.lua',
@@ -16,8 +16,7 @@ server_scripts {
     '@oxmysql/lib/MySQL.lua',
 	'server/main.lua',
     'config/server.lua',
-    'bridge/server/*.lua',
-    'bridge/server.lua',
+    'bridge/server/*.lua'
 }
 
 shared_scripts {

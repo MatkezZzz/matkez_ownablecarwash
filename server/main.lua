@@ -1,9 +1,50 @@
 local Config = require('config.shared')
 local sConfig = require('config.server')
+local cachedWashes = {}
 local deliveries = {}
 local delivering = {}
 
-function discordLog(description)
+
+CreateThread(function()
+    local response = MySQL.query.await('SELECT * FROM `matkez_ownablecarwash`')
+    for _, v in ipairs(response) do
+        cachedWashes[v.wash_id] = {
+            wash_id = v.wash_id,
+            owner = v.owner,
+            workers = json.decode(v.workers or '[]'),
+            data = json.decode(v.data or '[]'),
+            price = v.price,
+            washPrice = v.washPrice,
+            label = v.label,
+            water = v.water,
+            orders = json.decode(v.orders or '[]')
+        }
+    end
+end)
+
+function HasPermission(source)
+    local identifiers = GetPlayerIdentifiers(source)
+    for _, identifier in ipairs(identifiers) do
+        if Config.Creator.allowed[identifier] then return true end
+    end
+    return false
+end
+
+function IsEmployee(source, wash_id, onlyBoss)
+    local identifier = GetCharacterIdentifier(source)
+    local wash = cachedWashes[wash_id]
+    if wash.owner == identifier then return true end
+    if not onlyBoss then
+        for _, v in ipairs(wash.workers) do
+            if v.identifier == identifier then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+function Log(description)
     if not sConfig.log then return end
     if sConfig.log.ox_lib then
         lib.logger(GetCharacterIdentifier(source), 'matkez_ownablecarwash', description)
@@ -42,8 +83,19 @@ lib.callback.register('matkez_ownablecarwash:createCarwash', function(source, da
         rID, false, json.encode(data), data.price, data.label
     })
     if id then 
+        cachedWashes[rID] = {
+            wash_id = rID,
+            owner = '0',
+            workers = {},
+            data = data,
+            price = data.price,
+            washPrice = 15,
+            label = data.label,
+            water = 100,
+            orders = {}
+        }
         Notify(source, translate('created_success'), 'success', 5000)
-        discordLog(string.format(translate('log_created'), GetCharacterIdentifier(source), data, data.price))
+        Log(string.format(translate('log_created'), GetCharacterIdentifier(source), data, data.price))
         exports.ox_inventory:RegisterStash('carwash_'..rID, data.label, Config.Register.slots, Config.Register.weight)
         for _, id in ipairs(GetPlayers()) do
             lib.callback.await('matkez_ownablecarwash:createWashCL', id, data, rID)
@@ -52,15 +104,11 @@ lib.callback.register('matkez_ownablecarwash:createCarwash', function(source, da
 end)
 
 lib.callback.register('matkez_ownablecarwash:getAllWashes', function(source)
-    local response = MySQL.query.await('SELECT `wash_id`, `owner`, `washPrice`, `orders`, `data`, `price`, `label` FROM `matkez_ownablecarwash`')
-    return response
+    return cachedWashes
 end)
 
 lib.callback.register('matkez_ownablecarwash:getSpecificCarWash', function(source, wash_id)
-    local row = MySQL.single.await('SELECT `owner`, `price`, `washPrice`, `orders`, `data`, `workers`, `price`, `water`, `label` FROM `matkez_ownablecarwash` WHERE `wash_id` = ? LIMIT 1', {
-        wash_id
-    })
-    return row
+    return cachedWashes[wash_id]
 end)
 
 lib.callback.register('matkez_ownablecarwash:isEmployee', function(source, wash_id, onlyBoss)
@@ -68,35 +116,28 @@ lib.callback.register('matkez_ownablecarwash:isEmployee', function(source, wash_
 end)
 
 lib.callback.register('matkez_ownablecarwash:buyCarWash', function(source, wash_id)
-    local row = MySQL.single.await('SELECT `owner`, `price` FROM `matkez_ownablecarwash` WHERE `wash_id` = ? LIMIT 1', {
-        wash_id
-    })
+    local row = cachedWashes[wash_id]
     local price = tonumber(row.price)
     if row.owner ~= '0' then Exploit(source) return false end
     local money = exports.ox_inventory:Search(source, 'count', 'money')
     if money < price then Notify(source, translate('no_money'), 'error', 5000) return false end
     exports.ox_inventory:RemoveItem(source, 'money', price)
-    local affectedRows = MySQL.update.await('UPDATE matkez_ownablecarwash SET owner = ? WHERE wash_id = ?', {
-        GetCharacterIdentifier(source), wash_id
-    })
-    if affectedRows then
-        Notify(source, translate('bought_success'), 'success', 5000)
-        discordLog(string.format(translate('log_bought'), GetCharacterIdentifier(source), wash_id, price))
-    end
+    row.owner = GetCharacterIdentifier(source)
+    Notify(source, translate('bought_success'), 'success', 5000)
+    Log(string.format(translate('log_bought'), GetCharacterIdentifier(source), wash_id, price))
 end)
 
 lib.callback.register('matkez_ownablecarwash:employeeManagement', function(source, wash_id, id, action)
-    local row = MySQL.single.await('SELECT `owner`, `workers`, `label` FROM `matkez_ownablecarwash` WHERE `wash_id` = ? LIMIT 1', {
-        wash_id
-    })
+    local row = cachedWashes[wash_id]
 
+    if not id then Notify(source, translate('invalid_id'), 'error', 5000) return false end
     if row.owner ~= GetCharacterIdentifier(source) then Exploit(source) return false end
-    local workers = json.decode(row.workers or '[]')
+    local workers = row.workers
 
     if action == 'hire' then
         local cid = GetCharacterIdentifier(id)
 
-        if not GetCharacterIdentifier(id) then Notify(source, translate('invalid_id'), 'error', 5000) return false end
+        if not GetCharacterIdentifier(id) then return false end
 
         local dist = #(GetEntityCoords(GetPlayerPed(id)) - GetEntityCoords(GetPlayerPed(source)))
 
@@ -117,7 +158,7 @@ lib.callback.register('matkez_ownablecarwash:employeeManagement', function(sourc
         if want == 'confirm' then 
             table.insert(workers, {identifier = cid, name = GetCharacterName(id)})
             Notify(source, translate('hire_success'), 'success', 5000)
-            discordLog(string.format(translate('log_hire'), GetCharacterIdentifier(source), cid, wash_id))
+            Log(string.format(translate('log_hire'), GetCharacterIdentifier(source), cid, wash_id))
         end
     elseif action == 'fire' then
         for _, v in ipairs(workers) do
@@ -126,47 +167,39 @@ lib.callback.register('matkez_ownablecarwash:employeeManagement', function(sourc
             end
         end
     end
-    local affectedRows = MySQL.update.await('UPDATE matkez_ownablecarwash SET workers = ? WHERE wash_id = ?', {
-        json.encode(workers), wash_id
-    })
-    discordLog(string.format(translate('log_fire'), GetCharacterIdentifier(source), id, wash_id))
+    Wait(100)
+    row.workers = workers
+    Log(string.format(translate('log_fire'), GetCharacterIdentifier(source), id, wash_id))
     return true
 end)
 
 lib.callback.register('matkez_ownablecarwash:orderWater', function(source, wash_id, amount)
-    local row = MySQL.single.await('SELECT `owner`, `workers`, `label`, `orders` FROM `matkez_ownablecarwash` WHERE `wash_id` = ? LIMIT 1', {
-        wash_id
-    })
+    local row = cachedWashes[wash_id]
     if row.owner ~= GetCharacterIdentifier(source) then Exploit(source) return false end
     if amount > Config.Ordering.MaxLiters then return false end
     local money = exports.ox_inventory:Search('carwash_'..wash_id, 'count', 'money')
     if money < amount * Config.Ordering.PricePerLiter then Notify(source, translate('no_money'), 'error', 5000) return false end
     exports.ox_inventory:RemoveItem('carwash_'..wash_id, 'money', amount * Config.Ordering.PricePerLiter)
-    local orders = json.decode(row.orders or '[]')
+    local orders = row.orders
     table.insert(orders, {id = randomId(), liters = amount, busy = false})
-    local affectedRows = MySQL.update.await('UPDATE matkez_ownablecarwash SET orders = ? WHERE wash_id = ?', {
-        json.encode(orders), wash_id
-    })
-    discordLog(string.format(translate('log_order'), GetCharacterIdentifier(source), amount, amount * Config.Ordering.PricePerLiter, wash_id))
+    Wait(100)
+    row.orders = orders
+    Log(string.format(translate('log_order'), GetCharacterIdentifier(source), amount, amount * Config.Ordering.PricePerLiter, wash_id))
     return true
 end)
 
 lib.callback.register('matkez_ownablecarwash:openRegister', function(source, wash_id)
     if not IsEmployee(source, wash_id, false) then Exploit(source) return false end
     exports.ox_inventory:forceOpenInventory(source, 'stash', 'carwash_'..wash_id)
-    discordLog(string.format(translate('log_register'), GetCharacterIdentifier(source), wash_id))
+    Log(string.format(translate('log_register'), GetCharacterIdentifier(source), wash_id))
     return true
 end)
 
 lib.callback.register('matkez_ownablecarwash:changeLabel', function(source, wash_id, label)
-    local row = MySQL.single.await('SELECT `owner`, `label` FROM `matkez_ownablecarwash` WHERE `wash_id` = ? LIMIT 1', {
-        wash_id
-    })
+    local row = cachedWashes[wash_id]
     if row.owner ~= GetCharacterIdentifier(source) then Exploit(source) return false end
-    local affectedRows = MySQL.update.await('UPDATE matkez_ownablecarwash SET label = ? WHERE wash_id = ?', {
-        label, wash_id
-    })
-    discordLog(string.format(translate('log_label'), GetCharacterIdentifier(source), wash_id, row.label, label))
+    row.label = label
+    Log(string.format(translate('log_label'), GetCharacterIdentifier(source), wash_id, row.label, label))
     
     for _, id in ipairs(GetPlayers()) do
         lib.callback.await('matkez_ownablecarwash:setupBlips', id)
@@ -176,30 +209,22 @@ lib.callback.register('matkez_ownablecarwash:changeLabel', function(source, wash
 end)
 
 lib.callback.register('matkez_ownablecarwash:changePrice', function(source, wash_id, price)
-    local row = MySQL.single.await('SELECT `owner`, `label`, `washPrice` FROM `matkez_ownablecarwash` WHERE `wash_id` = ? LIMIT 1', {
-        wash_id
-    })
+    local row = cachedWashes[wash_id]
     if row.owner ~= GetCharacterIdentifier(source) then Exploit(source) return false end
-    local affectedRows = MySQL.update.await('UPDATE matkez_ownablecarwash SET washPrice = ? WHERE wash_id = ?', {
-        price, wash_id
-    })
-    discordLog(string.format(translate('log_price'), GetCharacterIdentifier(source), wash_id, row.washPrice, price))
+    row.washPrice = price
+    Log(string.format(translate('log_price'), GetCharacterIdentifier(source), wash_id, row.washPrice, price))
     return true
 end)
 
 lib.callback.register('matkez_ownablecarwash:washVehicle', function(source, wash_id)
-    local row = MySQL.single.await('SELECT `owner`, `label`, `washPrice`, `water` FROM `matkez_ownablecarwash` WHERE `wash_id` = ? LIMIT 1', {
-        wash_id
-    })
+    local row = cachedWashes[wash_id]
     if tonumber(row.water) < Config.Washing.WaterPerWash then Notify(source, translate('no_water'), 'error', 5000) return false end
     local money = exports.ox_inventory:Search(source, 'count', 'money')
     local price = tonumber(row.washPrice)
     local question = lib.callback.await('matkez_ownablecarwash:washQuestion', source, price)
     if question ~= 'confirm' then return false end
     if money < price then Notify(source, translate('no_money'), 'error', 5000) return false end
-    MySQL.update.await('UPDATE matkez_ownablecarwash SET water = water - ? WHERE wash_id = ?', {
-        Config.Washing.WaterPerWash, wash_id
-    })
+    row.water -= Config.Washing.WaterPerWash
     local progress = lib.callback.await('matkez_ownablecarwash:progress', source)
     if progress then
         exports.ox_inventory:AddItem('carwash_'..wash_id, 'money', price)
@@ -207,21 +232,17 @@ lib.callback.register('matkez_ownablecarwash:washVehicle', function(source, wash
         SetVehicleDirtLevel(GetVehiclePedIsIn(GetPlayerPed(source), false), 0.0)
         return true
     else
-        MySQL.update.await('UPDATE matkez_ownablecarwash SET water = water + ? WHERE wash_id = ?', {
-            Config.Washing.WaterPerWash, wash_id
-        })
+        row.water += Config.Washing.WaterPerWash
         return false
     end
 end)
 
 lib.callback.register('matkez_ownablecarwash:startDelivery', function(source, wash_id, delivery_id)
-    local row = MySQL.single.await('SELECT `owner`, `label`, `data`, `orders`, `water` FROM `matkez_ownablecarwash` WHERE `wash_id` = ? LIMIT 1', {
-        wash_id
-    })
+    local row = cachedWashes[wash_id]
     if not IsEmployee(source, wash_id, false) then Exploit(source) return false end
     if delivering[source] == true then Notify(source, translate('already_delivering'), 'error', 5000) return false end
-    local orders = json.decode(row.orders)
-    local data = json.decode(row.data)
+    local orders = row.orders
+    local data = row.data
     local tankerCoords
     for _, v in ipairs(orders) do
         if v.id == delivery_id then
@@ -238,9 +259,7 @@ lib.callback.register('matkez_ownablecarwash:startDelivery', function(source, wa
 
     if not tankerCoords then Notify(source, translate('no_place_for_tanker'), 'error', 5000) return false end
 
-    MySQL.update.await('UPDATE matkez_ownablecarwash SET orders = ? WHERE wash_id = ?', {
-        json.encode(orders), wash_id
-    })
+    row.orders = orders
 
     local truck = SpawnVehicle(source, Config.Delivery.TruckModel, vec4(data.truckCoords.x, data.truckCoords.y, data.truckCoords.z, data.truckHeading))
     local tanker = SpawnVehicle(source, Config.Delivery.TankerModel, tankerCoords)
@@ -251,14 +270,14 @@ lib.callback.register('matkez_ownablecarwash:startDelivery', function(source, wa
     table.insert(deliveries, {
         truck = truck,
         tanker = tanker,
-        wichWash = wash_id,
+        whichWash = wash_id,
         tankerPlate = plate,
         delivery_id = delivery_id,
         playerId = source
     })
 
     delivering[source] = true
-    discordLog(string.format(translate('log_delivery'), GetCharacterIdentifier(source), delivery_id, wash_id))
+    Log(string.format(translate('log_delivery'), GetCharacterIdentifier(source), delivery_id, wash_id))
 
     return true, tankerCoords
 end)
@@ -267,12 +286,10 @@ lib.callback.register('matkez_ownablecarwash:deliverWater', function(source, pla
     if not plate then return false end
     if not IsEmployee(source, wash_id, false) then return false end
 
-    local row = MySQL.single.await('SELECT `data`, `orders`, `water` FROM `matkez_ownablecarwash` WHERE `wash_id` = ? LIMIT 1', {
-        wash_id
-    })
+    local row = cachedWashes[wash_id]
 
-    local data = json.decode(row.data)
-    local orders = json.decode(row.orders)
+    local data = row.data
+    local orders = row.orders
     local distCheck = #(GetEntityCoords(GetPlayerPed(source)) - vec3(data.truckCoords.x, data.truckCoords.y, data.truckCoords.z))
 
     if distCheck > 10.0 then Exploit(source) return false end
@@ -284,7 +301,7 @@ lib.callback.register('matkez_ownablecarwash:deliverWater', function(source, pla
 
     for del, v in ipairs(deliveries) do
         if v.tankerPlate == plate then
-            if wash_id ~= v.wichWash then return false end
+            if wash_id ~= v.whichWash then return false end
             if v.playerId ~= source then Notify(source, translate('not_yours'), 'error', 5000) return false end
             DeleteEntity(v.tanker)
             DeleteEntity(v.truck)
@@ -305,53 +322,42 @@ lib.callback.register('matkez_ownablecarwash:deliverWater', function(source, pla
         table.remove(deliveries, deliveryToRemove)
         table.remove(orders, orderToRemove)
 
-        MySQL.update.await('UPDATE matkez_ownablecarwash SET water = water + ? WHERE wash_id = ?', {
-            liters, wash_id
-        })
+        row.water += liters
 
-        MySQL.update.await('UPDATE matkez_ownablecarwash SET orders = ? WHERE wash_id = ?', {
-            json.encode(orders), wash_id
-        })
+        row.orders = orders
 
         delivering[source] = false
-        discordLog(string.format(translate('log_delivered'), GetCharacterIdentifier(source), delivery_id, liters, wash_id))
+        Log(string.format(translate('log_delivered'), GetCharacterIdentifier(source), delivery_id, liters, wash_id))
         return true
     end
     return false
 end)
 
 lib.callback.register('matkez_ownablecarwash:transferOwnership', function(source, wash_id, id)
-    local row = MySQL.single.await('SELECT `owner` FROM `matkez_ownablecarwash` WHERE `wash_id` = ? LIMIT 1', {
-        wash_id
-    })
+    local row = cachedWashes[wash_id]
     
     if row.owner ~= GetCharacterIdentifier(source) then Exploit(source) return false end
     if id == source then return false end
     local newOwner = GetCharacterIdentifier(id)
     if not newOwner then Notify(source, translate('invalid_id'), 'error', 5000) return false end
     
-    MySQL.update.await('UPDATE matkez_ownablecarwash SET owner = ? WHERE wash_id = ?', {
-        newOwner, wash_id
-    })
-    discordLog(string.format(translate('log_ownership'), GetCharacterIdentifier(source), wash_id, newOwner))
+    row.owner = newOwner
+    Log(string.format(translate('log_ownership'), GetCharacterIdentifier(source), wash_id, newOwner))
     return true
 end)
 
 function CancelDelivery(source)
+    if not delivering[source] then return false end
     for _, v in ipairs(deliveries) do
         if v.playerId == source then
-            local row = MySQL.single.await('SELECT `data`, `orders`, `water` FROM `matkez_ownablecarwash` WHERE `wash_id` = ? LIMIT 1', {
-                v.wichWash
-            })
-            local orders = json.decode(row.orders)
+            local row = cachedWashes[v.whichWash]
+            local orders = row.orders
             for __, order in ipairs(orders) do
                 if order.id == v.delivery_id then
                     order.busy = false
                 end
             end
-            MySQL.update.await('UPDATE matkez_ownablecarwash SET orders = ? WHERE wash_id = ?', {
-                json.encode(orders), v.wichWash
-            })
+            row.orders = orders
             DeleteEntity(v.tanker)
             DeleteEntity(v.truck)
             table.remove(deliveries, _)
@@ -364,13 +370,35 @@ AddEventHandler('playerDropped', function(r, cr, s)
     CancelDelivery(source)
 end)
 
-RegisterCommand(Config.Delivery.CancelCommand, function(source)
+lib.addCommand(Config.Creator.Command, {
+    help = '',
+}, function(source, args, raw)
+    if not HasPermission(source) then return false end
+    lib.callback.await('matkez_ownablecarwash:client:creatorContext', source)
+end)
+
+lib.addCommand(Config.Delivery.CancelCommand, {
+    help = '',
+}, function(source, args, raw)
     CancelDelivery(source)
 end)
 
-Citizen.CreateThread(function()
-    local response = MySQL.query.await('SELECT `wash_id`, `owner`, `washPrice`, `data`, `price`, `label` FROM `matkez_ownablecarwash`')
-    for _, v in ipairs(response) do
-        exports.ox_inventory:RegisterStash('carwash_'..v.wash_id, v.label, Config.Register.slots, Config.Register.weight)
+CreateThread(function()
+    Wait(1000)
+    for k, v in pairs(cachedWashes) do
+        exports.ox_inventory:RegisterStash('carwash_'..k, v.label, Config.Register.slots, Config.Register.weight)
     end
+end)
+
+function saveAllWashes()
+    for k, v in pairs(cachedWashes) do
+        MySQL.update.await('UPDATE matkez_ownablecarwash SET owner = ?, workers = ?, data = ?, price = ?, washPrice = ?, label = ?, water = ?, orders = ? WHERE wash_id = ?', {
+            v.owner, json.encode(v.workers), json.encode(v.data), v.price, v.washPrice, v.label, v.water, json.encode(v.orders), k
+        })
+    end
+end
+
+AddEventHandler('onResourceStop', function(res)
+    if GetCurrentResourceName() ~= res then return end
+    saveAllWashes()
 end)

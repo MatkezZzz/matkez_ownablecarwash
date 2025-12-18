@@ -6,16 +6,6 @@ AddEventHandler('QBCore:Client:OnPlayerLoaded', function()
     setup()
 end)
 
-function HasPermission()
-    local identifier = QBX.PlayerData.citizenid
-    for _, id in ipairs(Config.Creator.allowed) do
-        if id == identifier then 
-            return true 
-        end
-    end
-    return false
-end
-
 function GetCharacterIdentifier()
     return QBX.PlayerData.citizenid
 end

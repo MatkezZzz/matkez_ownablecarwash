@@ -1,6 +1,6 @@
 return {
-    Framework = 'QB', -- QBOX, ESX, QB
-    Target = 'qb-target', -- qb-target or ox_target
+    Framework = 'QBOX', -- QBOX, ESX, QB
+    Target = 'ox_target', -- qb-target or ox_target
     Language = 'EN',
     Ordering = {
         PricePerLiter = 10,
@@ -28,7 +28,9 @@ return {
         WashingDuration = 10000
     },
     Creator = {
-        allowed = {'cahr1:aaaa', 'ASDASD123'}, -- identifer
+        allowed = { -- identifier (steam, license, discord etc.)
+            -- ['license:123123123123123123123'] = true <-- example
+        },
         props = {
             ped = 'cs_fbisuit_01',
             wash_coords = 'sultan',
@@ -74,7 +76,7 @@ return {
             open_register = 'Otvorite kasu',
             open_register_description = 'Pogledajte koliko ste zaradili',
             stats = 'Statistika',
-            stats_description = 'Voda: %sL  \n  Radnici: %s  \n  Cena Pranja: %s$',
+            stats_description = 'Voda: %sL \n Radnici: %s \n Cena Pranja: %s$',
             not_employee = 'Niste radnik',
             hire_question_header = 'Ponuda za posao',
             hire_question_content = '%s Vam nudi posao u %s perionici',
@@ -153,7 +155,7 @@ return {
             open_register = 'Open Register',
             open_register_description = 'Check your earnings',
             stats = 'Statistics',
-            stats_description = 'Water: %sL  \n  Employees: %s  \n  Wash Price: %s$',
+            stats_description = 'Water: %sL \n Employees: %s \n Wash Price: %s$',
             not_employee = 'You are not an employee',
             hire_question_header = 'Job Offer',
             hire_question_content = '%s is offering you a job at %s car wash',
