@@ -392,13 +392,25 @@ end)
 
 function saveAllWashes()
     for k, v in pairs(cachedWashes) do
-        MySQL.update.await('UPDATE matkez_ownablecarwash SET owner = ?, workers = ?, data = ?, price = ?, washPrice = ?, label = ?, water = ?, orders = ? WHERE wash_id = ?', {
+        MySQL.update('UPDATE matkez_ownablecarwash SET owner = ?, workers = ?, data = ?, price = ?, washPrice = ?, label = ?, water = ?, orders = ? WHERE wash_id = ?', {
             v.owner, json.encode(v.workers), json.encode(v.data), v.price, v.washPrice, v.label, v.water, json.encode(v.orders), k
         })
     end
+    print('Car washes saved')
 end
 
 AddEventHandler('onResourceStop', function(res)
     if GetCurrentResourceName() ~= res then return end
     saveAllWashes()
+end)
+
+AddEventHandler('txAdmin:events:serverShuttingDown', function()
+    saveAllWashes()
+end)
+
+CreateThread(function()
+    while true do
+       Wait(60000 * 10)
+       saveAllWashes()
+    end
 end)

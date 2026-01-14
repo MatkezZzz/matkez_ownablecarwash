@@ -159,6 +159,7 @@ lib.callback.register('matkez_ownablecarwash:createWashCL', function(data, wash_
         coords = vec3(data.truckCoords.x, data.truckCoords.y, data.truckCoords.z),
         radius = 5,
         inside = function()
+            DrawMarker(39, data.truckCoords.x, data.truckCoords.y, data.truckCoords.z, 0, 0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 255, 255, 255, 255, false, true, 2, false, false, false, false)
             if IsControlJustPressed(0, 38) then
                 if not IsPedInAnyVehicle(cache.ped, false) then return end
                 local vehicle = GetVehiclePedIsIn(cache.ped, false)
