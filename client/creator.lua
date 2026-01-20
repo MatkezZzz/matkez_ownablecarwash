@@ -1,11 +1,11 @@
 local Config = require('config.shared')
 local icon = Config.Icons
-local creatorData = {price = nil, label = nil, pedCoords = nil, pedHeading = nil, washCoords = nil, truckCoords = nil, truckHeading = nil}
+local creatorData = {price = nil, label = nil, pedCoords = nil, pedHeading = nil, washingCoords = {}, truckCoords = nil, truckHeading = nil}
 local raycastObject
 local creating = false
 
 function resetCreatorData()
-    creatorData = {price = nil, label = nil, pedCoords = nil, pedHeading = nil, washCoords = nil, truckCoords = nil, truckHeading = nil}
+    creatorData = {price = nil, label = nil, pedCoords = nil, pedHeading = nil, washingCoords = {}, truckCoords = nil, truckHeading = nil}
 end
 
 function raycast(type)
@@ -49,7 +49,7 @@ function raycast(type)
                 creatorData.pedCoords = GetEntityCoords(raycastObject)
                 creatorData.pedHeading = GetEntityHeading(raycastObject)
             elseif type == 'wash_coords' then
-                creatorData.washCoords = GetEntityCoords(raycastObject)
+                table.insert(creatorData.washingCoords, GetEntityCoords(raycastObject))
             elseif type == 'truck' then
                 creatorData.truckCoords = GetEntityCoords(raycastObject)
                 creatorData.truckHeading = GetEntityHeading(raycastObject)
@@ -65,7 +65,7 @@ end
 function creatorContext()
     local disabled = true
 
-    if creatorData.label ~= nil and creatorData.pedCoords ~= nil and creatorData.truckCoords ~= nil and creatorData.washCoords ~= nil then 
+    if creatorData.label ~= nil and creatorData.pedCoords ~= nil and creatorData.truckCoords ~= nil and #creatorData.washingCoords > 0 then 
         disabled = false
     end
 
@@ -108,6 +108,14 @@ function creatorContext()
                 end,
             },
             {
+                title = translate('washing_coords'),
+                description = translate('washing_coords_desc'),
+                icon = icon.washing_coords_list,
+                onSelect = function()
+                    openCachedCoords()
+                end
+            },
+            {
                 title = translate('carwash_truck_pos'),
                 description = translate('carwash_truck_pos_description'),
                 icon = icon.carwash_truck_pos,
@@ -146,6 +154,39 @@ function creatorContext()
     })
 
     lib.showContext('creator_context')
+end
+
+function openCachedCoords()
+    local options = {}
+    local coordsTable = creatorData.washingCoords
+
+    table.insert(options, {
+        title = translate('go_back'),
+        description = translate('go_back_description'),
+        icon = icon.go_back,
+        onSelect = function()
+            creatorContext()
+        end,
+    })
+
+    for idx, v in ipairs(coordsTable) do
+        table.insert(options, {
+            title = '['..idx..'] '..tostring(v),
+            description = translate('creator_delete_coord'),
+            icon = icon.washing_coords,
+            onSelect = function()
+                table.remove(coordsTable, idx)
+                openCachedCoords()
+            end
+        })
+    end
+
+    lib.registerContext({
+        id = 'cachedCoords',
+        title = translate('coords_title'),
+        options = options
+    })
+    lib.showContext('cachedCoords')
 end
 
 lib.callback.register('matkez_ownablecarwash:client:creatorContext', creatorContext)

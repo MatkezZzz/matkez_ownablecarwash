@@ -124,7 +124,11 @@ return {
             log_ownership = 'Igrac %s je prebacio vlasnistvo %s perionice na %s igraca',
             log_price = 'Igrac %s je promenio cenu pranja u %s perionici iz %s$ u %s$',
             reset_all = 'Restartujte sve',
-            reset_all_description = ''
+            reset_all_description = '',
+            creator_delete_coord = 'Kliknite da obrisete ovu koordinatu',
+            coords_title = 'Koordinate',
+            washing_coords = 'Koordinate za pranje vozila',
+            washing_coords_desc = 'Pogledajte koordinate za pranje vozila koje ste postavili'
         },
         ['EN'] = {
             creator_textui = '[ENTER] - Place  \n  [X] - Cancel  \n  [SHIFT] - Rotate Left  \n  [ALT] - Rotate Right',
@@ -203,7 +207,11 @@ return {
             log_ownership = 'Player %s transferred ownership of %s car wash to player %s',
             log_price = 'Player %s changed the wash price at %s car wash from %s$ to %s$',
             reset_all = 'Restart Everything',
-            reset_all_description = ''
+            reset_all_description = '',
+            creator_delete_coord = 'Click to remove this coord',
+            coords_title = 'Coords',
+            washing_coords = 'Washing coords',
+            washing_coords_desc = 'See all washing coords that you placed'
         }
     },
     Icons = {
@@ -225,6 +233,8 @@ return {
         go_back = 'arrow-left',
         change_price = 'hand-holding-dollar',
         transfer_ownership = 'signature',
-        reset_all = 'rotate'
+        reset_all = 'rotate',
+        washing_coords = 'location-dot',
+        washing_coords_list = 'list'
     }
 }

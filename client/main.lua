@@ -11,16 +11,20 @@ function setupBlips()
     local washes = lib.callback.await('matkez_ownablecarwash:getAllWashes', false)
     for _, v in pairs(washes) do
         local data = v.data
-        local blip = AddBlipForCoord(data.washCoords.x, data.washCoords.y, data.washCoords.z)
-        SetBlipSprite(blip, Config.Blip.sprite)
-        SetBlipColour(blip, Config.Blip.color)
-        SetBlipScale(blip, Config.Blip.size)
-        SetBlipDisplay(blip, 4)
-        BeginTextCommandSetBlipName('STRING')
-        AddTextComponentString(v.label)
-        EndTextCommandSetBlipName(blip)
-        SetBlipAsShortRange(blip, true)
-        table.insert(blips, blip)
+        CreateThread(function()
+            for indx, p in ipairs(data.washingCoords) do
+                local blip = AddBlipForCoord(p.x, p.y, p.z)
+                SetBlipSprite(blip, Config.Blip.sprite)
+                SetBlipColour(blip, Config.Blip.color)
+                SetBlipScale(blip, Config.Blip.size)
+                SetBlipDisplay(blip, 4)
+                BeginTextCommandSetBlipName('STRING')
+                AddTextComponentString(v.label)
+                EndTextCommandSetBlipName(blip)
+                SetBlipAsShortRange(blip, true)
+                table.insert(blips, blip)
+            end
+        end)
     end
 end
 
@@ -68,22 +72,26 @@ function setup()
 
         table.insert(props, ped)
 
-        lib.zones.sphere({
-            coords = vec3(data.washCoords.x, data.washCoords.y, data.washCoords.z),
-            radius = Config.Washing.WashRadius,
-            inside = function()
-                if IsControlJustPressed(0, 38) then
-                    Wash(v.wash_id)
-                    return
-                end
-            end,
-            onEnter = function()
-                lib.showTextUI(translate('wash_vehicle'))
-            end,
-            onExit = function()
-                lib.hideTextUI()
+        CreateThread(function()
+            for indx, p in ipairs(data.washingCoords) do
+                lib.zones.sphere({
+                    coords = vec3(p.x, p.y, p.z),
+                    radius = Config.Washing.WashRadius,
+                    inside = function()
+                        if IsControlJustPressed(0, 38) then
+                            Wash(v.wash_id)
+                            return
+                        end
+                    end,
+                    onEnter = function()
+                        lib.showTextUI(translate('wash_vehicle'))
+                    end,
+                    onExit = function()
+                        lib.hideTextUI()
+                    end
+                })
             end
-        })
+        end)
 
         lib.zones.sphere({
             coords = vec3(data.truckCoords.x, data.truckCoords.y, data.truckCoords.z),
@@ -138,22 +146,26 @@ lib.callback.register('matkez_ownablecarwash:createWashCL', function(data, wash_
 
     table.insert(props, ped)
 
-    lib.zones.sphere({
-        coords = vec3(data.washCoords.x, data.washCoords.y, data.washCoords.z),
-        radius = Config.Washing.WashRadius,
-        inside = function()
-            if IsControlJustPressed(0, 38) then
-                Wash(wash_id)
-                return
-            end
-        end,
-        onEnter = function()
-            lib.showTextUI(translate('wash_vehicle'))
-        end,
-        onExit = function()
-            lib.hideTextUI()
+    CreateThread(function()
+        for indx, p in ipairs(data.washingCoords) do
+            lib.zones.sphere({
+                coords = vec3(p.x, p.y, p.z),
+                radius = Config.Washing.WashRadius,
+                inside = function()
+                    if IsControlJustPressed(0, 38) then
+                        Wash(wash_id)
+                        return
+                    end
+                end,
+                onEnter = function()
+                    lib.showTextUI(translate('wash_vehicle'))
+                end,
+                onExit = function()
+                    lib.hideTextUI()
+                end
+            })
         end
-    })
+    end)
 
     lib.zones.sphere({
         coords = vec3(data.truckCoords.x, data.truckCoords.y, data.truckCoords.z),
