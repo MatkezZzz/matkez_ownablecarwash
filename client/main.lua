@@ -132,17 +132,32 @@ lib.callback.register('matkez_ownablecarwash:createWashCL', function(data, wash_
     SetEntityInvincible(ped, true)
     SetBlockingOfNonTemporaryEvents(ped, true)
 
-    exports.ox_target:addLocalEntity(ped, {
-        {
-            name = 'carwash_'..wash_id,
-            icon = icon.ox_target_open,
-            label = translate('ox_target_open'),
-            onSelect = function(target)
-                CarWash(wash_id)
-            end,
-            distance = 1.5,
-        }
-    })
+    if Config.Target == 'ox_target' then
+        exports.ox_target:addLocalEntity(ped, {
+            {
+                name = 'carwash_'..wash_id,
+                icon = icon.ox_target_open,
+                label = translate('ox_target_open'),
+                onSelect = function(target)
+                    CarWash(wash_id)
+                end,
+                distance = 1.5,
+            }
+        })
+    elseif Config.Target == 'qb-target' then
+        exports['qb-target']:AddTargetEntity(ped, {
+            options = {
+                {
+                    icon = icon.ox_target_open,
+                    label = translate('ox_target_open'),
+                    action = function(entity)
+                        CarWash(wash_id)
+                    end,
+                }
+            },
+            distance = 1.5
+        })
+    end
 
     table.insert(props, ped)
 

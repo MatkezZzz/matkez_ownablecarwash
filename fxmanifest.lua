@@ -3,7 +3,7 @@ game 'gta5'
 author 'MatkezZz'
 description 'Ownable car washes'
 lua54 'yes'
-version '1.0.5'
+version '1.0.7'
 
 client_scripts {
     'client/main.lua',
